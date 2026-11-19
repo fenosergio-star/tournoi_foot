@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${tournament.name}">Tournoi - Tournament Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link th:href="@{/css/styles.css}" rel="stylesheet">
+</head>
+<body>
+<div class="d-flex">
+    <nav th:replace="~{fragments/sidebar :: sidebar('tournaments')}"></nav>
+    <div class="flex-grow-1 app-main">
+        <main class="app-content">
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+                <span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                <span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${infoMessage}" class="alert alert-info alert-dismissible fade show" role="alert">
+                <span th:text="${infoMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <div class="page-hero d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="hero-icon"><i class="fas fa-trophy"></i></div>
+                    <div>
+                        <h1 th:text="${tournament.name}"></h1>
+                        <p>
+                            <span th:text="${tournament.sport}"></span> ·
+                            <span th:text="${tournament.type}"></span> ·
+                            <span th:text="${tournament.location}"></span>
+                        </p>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <span class="badge badge-status fs-6"
+                          th:classappend="|bg-${tournament.status.name() == 'BROUILLON' ? 'secondary' : tournament.status.name() == 'INSCRIPTION' ? 'info' : tournament.status.name() == 'PROGRAMME' ? 'primary' : tournament.status.name() == 'EN_COURS' ? 'warning' : tournament.status.name() == 'TERMINE' ? 'success' : 'danger'}|"
+                          th:text="${tournament.status}"></span>
+                    <a th:if="${canManage}" th:href="@{/tournaments/{id}/edit(id=${tournament.id})}" class="btn btn-sm btn-light">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-body row align-items-center g-3">
+                    <div class="col-md-3"><strong>Début :</strong> <span class="text-muted" th:text="${tournament.startDate}"></span></div>
+                    <div class="col-md-3"><strong>Fin :</strong> <span class="text-muted" th:text="${tournament.endDate}"></span></div>
+                    <div class="col-md-3"><strong>Équipes :</strong> <span class="text-muted" th:text="${tournament.registeredTeams} + '/' + ${tournament.maxTeams}"></span></div>
+                    <div class="col-md-3">
+                        <strong>Pays :</strong>
+                        <span th:if="${tournament.country != null}" class="badge bg-light text-dark border"
+                              th:text="${tournament.country.label}"></span>
+                        <span th:if="${tournament.country == null}" class="text-muted">International</span>
+                    </div>
+                    <div class="col-md-3">
+                        <form th:action="@{/tournaments/{id}/generate-matches(id=${tournament.id})}" method="post"
+                              th:if="${canOperate and (tournament.status.name() == 'INSCRIPTION' or tournament.status.name() == 'PROGRAMME')} and ${#lists.isEmpty(matches)}">
+                            <button class="btn btn-success btn-sm w-100" type="submit">
+                                <i class="fas fa-calendar-plus me-1"></i>
+                                <span th:text="${poules} ? 'Générer les poules' : 'Générer les matchs'"></span>
+                            </button>
+                        </form>
+                        <form th:action="@{/tournaments/{id}/generate-elimination(id=${tournament.id})}" method="post"
+                              th:if="${canOperate and poules and groupStageComplete and !eliminationGenerated}">
+                            <button class="btn btn-primary btn-sm w-100" type="submit">
+                                <i class="fas fa-sitemap me-1"></i> Générer la phase finale
+                            </button>
+                        </form>
+                        <form th:action="@{/tournaments/{id}/qualify(id=${tournament.id})}" method="post"
+                              th:if="${canOperate and canQualify}" class="mt-2">
+                            <input type="hidden" name="count" value="3">
+                            <button class="btn btn-warning btn-sm w-100" type="submit">
+                                <i class="fas fa-trophy me-1"></i> Qualifier les 3 premiers en Ligue des Champions
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <ul class="nav nav-tabs mb-3" id="detailTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="matches-tab" data-bs-toggle="tab" data-bs-target="#matches" type="button" role="tab">Matchs</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="ranking-tab" data-bs-toggle="tab" data-bs-target="#ranking" type="button" role="tab">Classement</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="teams-tab" data-bs-toggle="tab" data-bs-target="#teams" type="button" role="tab">Équipes inscrites</button>
+                </li>
+                <li class="nav-item" role="presentation" th:if="${tournament.type.name() == 'ELIMINATION_DIRECTE' or poules}">
+                    <button class="nav-link" id="tree-tab" data-bs-toggle="tab" data-bs-target="#tree" type="button" role="tab">Arbre d'élimination</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="detailTabContent">
+                <!-- MATCHES -->
+                <div class="tab-pane fade show active" id="matches" role="tabpanel">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <div class="d-flex justify-content-between">
+                                <h6 class="mb-0 align-self-center">Liste des matchs</h6>
+                                <form th:if="${canManage}" th:action="@{/tournaments/{id}/status(id=${tournament.id})}" method="post" class="d-flex gap-2">
+                                    <select name="status" class="form-select form-select-sm" style="width:150px;">
+                                        <option value="EN_COURS">Passez en cours</option>
+                                        <option value="TERMINE">Terminer</option>
+                                        <option value="ANNULE">Annuler</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-primary">Mettre à jour</button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                <tr>
+                                    <th th:if="${poules}">Poule</th>
+                                    <th>Phase</th>
+                                    <th>Date / Heure</th>
+                                    <th>Terrain</th>
+                                    <th>Domicile</th>
+                                    <th>Score</th>
+                                    <th>Visiteur</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="m : ${matches}">
+                                    <td th:if="${poules}" th:text="${m.group}"></td>
+                                    <td>
+                                        <span th:text="${m.phase}"></span>
+                                        <span th:if="${m.leg != null}" class="badge bg-light text-dark border"
+                                              th:text="${m.leg == 1} ? 'Aller' : 'Retour'"></span>
+                                    </td>
+                                    <td th:text="${m.matchDate} + ' ' + ${m.matchTime}"></td>
+                                    <td th:text="${m.field}"></td>
+                                    <td th:text="${m.homeTeamName}"></td>
+                                    <td>
+                                        <span th:if="${m.status.name() == 'COMPLETED'}" th:text="${m.homeScore} + ' - ' + ${m.awayScore}"></span>
+                                        <span th:if="${m.status.name() == 'COMPLETED' and m.homePenalties != null}"
+                                              class="d-block small text-muted"
+                                              th:text="'t.a.b. ' + ${m.homePenalties} + ' - ' + ${m.awayPenalties}"></span>
+                                        <span th:if="${m.status.name() != 'COMPLETED'}" class="text-muted">-</span>
+                                    </td>
+                                    <td th:text="${m.awayTeamName}"></td>
+                                    <td>
+                                        <span class="badge badge-status"
+                                              th:classappend="|bg-${m.status.name() == 'PLANNED' ? 'secondary' : m.status.name() == 'IN_PROGRESS' ? 'warning' : m.status.name() == 'COMPLETED' ? 'success' : 'danger'}|"
+                                              th:text="${m.status}"></span>
+                                    </td>
+                                    <td>
+                                        <a th:if="${canOperate}" th:href="@{/matches/{id}(id=${m.id})}" class="btn btn-sm btn-outline-primary"
+                                           th:title="${m.status.name() == 'COMPLETED'} ? 'Modifier le résultat' : 'Saisir le résultat'">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a th:if="${!canOperate}" th:href="@{/matches/{id}(id=${m.id})}" class="btn btn-sm btn-outline-secondary"
+                                           title="Voir le match">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(matches)}">
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        Aucun match. Cliquez sur "Générer les matchs" pour créer le calendrier.
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RANKING -->
+                <div class="tab-pane fade" id="ranking" role="tabpanel">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0">Classement du championnat</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                <tr>
+                                    <th th:if="${poules}">Poule</th>
+                                    <th>Pos</th>
+                                    <th>Équipe</th>
+                                    <th>J</th>
+                                    <th>G</th>
+                                    <th>N</th>
+                                    <th>P</th>
+                                    <th>BP</th>
+                                    <th>BC</th>
+                                    <th>Diff</th>
+                                    <th>Pts</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="s : ${ranking}">
+                                    <td th:if="${poules}"><span class="badge bg-secondary" th:text="${s.group}"></span></td>
+                                    <td th:text="${s.position}"></td>
+                                    <td><strong th:text="${s.teamName}"></strong></td>
+                                    <td th:text="${s.matchesPlayed}"></td>
+                                    <td th:text="${s.wins}"></td>
+                                    <td th:text="${s.draws}"></td>
+                                    <td th:text="${s.losses}"></td>
+                                    <td th:text="${s.goalsFor}"></td>
+                                    <td th:text="${s.goalsAgainst}"></td>
+                                    <td th:text="${s.goalDifference}"></td>
+                                    <td><strong th:text="${s.points}"></strong></td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(ranking)}">
+                                    <td colspan="10" class="text-center text-muted py-4">
+                                        Le classement sera disponible une fois les résultats enregistrés.
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TEAMS -->
+                <div class="tab-pane fade" id="teams" role="tabpanel">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0">Équipes inscrites (<span th:text="${tournament.registeredTeams}"></span>)</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-4" th:if="${canOperate}">
+                                <div class="col-md-8">
+                                    <form th:action="@{/tournaments/{id}/teams(id=${tournament.id})}" method="post"
+                                          class="d-flex gap-2">
+                                        <select name="teamId" class="form-select" required
+                                                th:if="${#lists.size(availableTeams) > 0}">
+                                            <option th:each="t : ${availableTeams}" th:value="${t.id}"
+                                                        th:text="${t.name + (t.country != null ? ' — ' + t.country.label : '')}"></option>
+                                        </select>
+                                        <button class="btn btn-success" type="submit"
+                                                th:if="${#lists.size(availableTeams) > 0}">
+                                            <i class="fas fa-plus"></i> Inscrire
+                                        </button>
+                                        <span th:if="${#lists.size(availableTeams) == 0}" class="text-muted align-self-center">
+                                            Aucune équipe disponible à inscrire.
+                                        </span>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3 mb-3" th:each="t : ${registeredTeams}">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <div class="team-logo mx-auto mb-2" th:text="${#strings.substring(t.name, 0, 1)}"></div>
+                                            <h6 class="mb-1" th:text="${t.name}"></h6>
+                                            <div class="text-muted small" th:text="${t.city}"></div>
+                                            <span th:if="${t.country != null}" class="badge bg-light text-dark border"
+                                                  th:text="${t.country.label}"></span>
+                                            <div class="text-muted small">Entraîneur : <span th:text="${t.coach}"></span></div>
+                                            <form th:if="${canManage}" th:action="@{/tournaments/{id}/teams/{teamId}/remove(id=${tournament.id}, teamId=${t.id})}"
+                                                  method="post" class="mt-2"
+                                                  onsubmit="return confirm('Retirer cette équipe du tournoi ?');">
+                                                <button class="btn btn-sm btn-outline-danger">Retirer</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div th:if="${#lists.isEmpty(registeredTeams)}" class="col-12 text-center text-muted py-4">
+                                    Aucune équipe inscrite à ce tournoi.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ELIMINATION TREE -->
+                <div class="tab-pane fade" id="tree" role="tabpanel">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0">Arbre d'élimination directe</h6>
+                        </div>
+                        <div class="card-body">
+                            <div th:if="${bracket != null}" class="elimination-tree">
+                                <div class="elimination-round" th:each="round : ${bracket.rounds}">
+                                    <h6 class="text-center text-muted" th:text="${round.label}">Tour</h6>
+                                    <div th:each="m : ${round.matches}" class="elimination-match mb-2"
+                                         th:classappend="${m.status.name() == 'COMPLETED'} ? 'winner'">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span>
+                                                <span th:text="${m.homeTeamName} ?: 'En attente'"
+                                                      th:classappend="${m.homeTeamName == null} ? 'fst-italic text-muted'"></span>
+                                                <span th:if="${m.homePenalties != null}"
+                                                      class="badge bg-secondary ms-1"
+                                                      th:text="'(' + ${m.homePenalties} + ')'"></span>
+                                            </span>
+                                            <span th:text="${m.status.name() == 'COMPLETED'} ? ${m.homeScore} : '-'"></span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span>
+                                                <span th:text="${m.awayTeamName} ?: 'En attente'"
+                                                      th:classappend="${m.awayTeamName == null} ? 'fst-italic text-muted'"></span>
+                                                <span th:if="${m.awayPenalties != null}"
+                                                      class="badge bg-secondary ms-1"
+                                                      th:text="'(' + ${m.awayPenalties} + ')'"></span>
+                                            </span>
+                                            <span th:text="${m.status.name() == 'COMPLETED'} ? ${m.awayScore} : '-'"></span>
+                                        </div>
+                                        <div class="small mt-1" th:if="${canOperate}">
+                                            <a th:if="${m.teamsReady}" th:href="@{/matches/{id}(id=${m.id})}"
+                                               class="text-decoration-none">
+                                                <i class="fas fa-edit"></i>
+                                                <span th:text="${m.status.name() == 'COMPLETED'} ? 'Modifier' : 'Saisir le résultat'"></span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div th:if="${bracket == null}" class="text-center text-muted py-4">
+                                L'arbre sera disponible après la génération des matchs.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

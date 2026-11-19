@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Formulaire équipe - Tournament Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link th:href="@{/css/styles.css}" rel="stylesheet">
+</head>
+<body>
+<div class="d-flex">
+    <nav th:replace="~{fragments/sidebar :: sidebar('teams')}"></nav>
+    <div class="flex-grow-1" style="min-height: 100vh;">
+        <main class="app-content">
+            <div class="page-hero d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="hero-icon"><i class="fas" th:classappend="${isEdit} ? 'fa-edit' : 'fa-plus'"></i></div>
+                    <div>
+                        <h1 th:text="${isEdit} ? 'Modifier l\'équipe' : 'Nouvelle équipe'"></h1>
+                        <p>Renseignez les informations de l'équipe</p>
+                    </div>
+                </div>
+                <a th:href="@{/teams}" class="btn btn-light fw-semibold">
+                    <i class="fas fa-arrow-left me-1"></i> Retour
+                </a>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <form th:if="${!isEdit}" th:action="@{/teams}" method="post" th:object="${team}" class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nom de l'équipe *</label>
+                            <input type="text" th:field="*{name}" class="form-control"
+                                   th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'">
+                            <div class="invalid-feedback" th:errors="*{name}"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Logo URL</label>
+                            <input type="text" th:field="*{logo}" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ville</label>
+                            <input type="text" th:field="*{city}" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Pays <small class="text-muted">(auto-inscription dans la ligue nationale)</small></label>
+                            <select th:field="*{country}" class="form-select">
+                                <option value="">— Aucun (international) —</option>
+                                <option th:each="c : ${countries}" th:value="${c.name()}" th:text="${c.label}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Entraîneur *</label>
+                            <input type="text" th:field="*{coach}" class="form-control"
+                                   th:classappend="${#fields.hasErrors('coach')} ? 'is-invalid'">
+                            <div class="invalid-feedback" th:errors="*{coach}"></div>
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> Créer</button>
+                        </div>
+                    </form>
+
+                    <form th:if="${isEdit}" th:action="@{/teams/{id}/edit(id=${team.id})}" method="post" class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nom</label>
+                            <input type="text" name="name" class="form-control" th:value="${team.name}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Logo URL</label>
+                            <input type="text" name="logo" class="form-control" th:value="${team.logo}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ville</label>
+                            <input type="text" name="city" class="form-control" th:value="${team.city}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Pays <small class="text-muted">(auto-inscription dans la ligue nationale)</small></label>
+                            <select name="country" class="form-select">
+                                <option value="">— Aucun (international) —</option>
+                                <option th:each="c : ${countries}" th:value="${c.name()}" th:text="${c.label}"
+                                        th:selected="${team.country != null and team.country.name() == c.name()}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Entraîneur</label>
+                            <input type="text" name="coach" class="form-control" th:value="${team.coach}">
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> Enregistrer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

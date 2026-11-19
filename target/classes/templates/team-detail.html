@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${team.name} + ' - Détail équipe'">Équipe - Tournament Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link th:href="@{/css/styles.css}" rel="stylesheet">
+</head>
+<body>
+<div class="d-flex">
+    <nav th:replace="~{fragments/sidebar :: sidebar('teams')}"></nav>
+    <div class="flex-grow-1 app-main">
+        <main class="app-content">
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+                <span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                <span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <div class="page-hero d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <img class="avatar-round" style="width:64px;height:64px;border:3px solid rgba(255,255,255,.85);"
+                         th:src="@{/images/player-square.jpg}" alt="">
+                    <div>
+                        <h1 th:text="${team.name}"></h1>
+                        <p>
+                            <span th:text="${team.city}"></span>
+                            <span th:if="${team.country != null}" class="badge bg-light text-dark border ms-1"
+                                  th:text="${team.country.label}"></span>
+                            · Entraîneur : <span th:text="${team.coach}"></span>
+                        </p>
+                    </div>
+                </div>
+                <a th:href="@{/teams}" class="btn btn-light fw-semibold"><i class="fas fa-arrow-left"></i> Retour</a>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">Joueurs (<span th:text="${#lists.size(players)}"></span>)</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                <tr>
+                                    <th>N°</th>
+                                    <th>Nom</th>
+                                    <th>Poste</th>
+                                    <th></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="p : ${players}">
+                                    <td th:text="${p.number}"></td>
+                                    <td th:text="${p.firstName} + ' ' + ${p.lastName}"></td>
+                                    <td th:text="${p.position}"></td>
+                                    <td>
+                                        <form th:if="${canManage}" th:action="@{/teams/{teamId}/players/{playerId}/remove(teamId=${team.id}, playerId=${p.id})}"
+                                              method="post" style="display:inline;"
+                                              onsubmit="return confirm('Retirer ce joueur ?');">
+                                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(players)}">
+                                    <td colspan="4" class="text-center text-muted py-3">Aucun joueur dans cette équipe.</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4" th:if="${canOperate}">
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h6 class="mb-0">Ajouter un joueur</h6>
+                        </div>
+                        <div class="card-body">
+                            <form th:action="@{/teams/{id}/players(id=${team.id})}" method="post" class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label small">Prénom</label>
+                                    <input type="text" name="firstName" class="form-control form-control-sm" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small">Nom</label>
+                                    <input type="text" name="lastName" class="form-control form-control-sm" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small">Poste</label>
+                                    <input type="text" name="position" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small">N°</label>
+                                    <input type="number" name="number" class="form-control form-control-sm" min="1">
+                                </div>
+                                <div class="col-12">
+                                    <button class="btn btn-success btn-sm w-100">
+                                        <i class="fas fa-user-plus"></i> Ajouter
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

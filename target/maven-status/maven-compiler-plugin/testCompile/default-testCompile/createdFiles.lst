@@ -1,0 +1,5 @@
+com/example/tournament/util/MatchGeneratorUtilTest.class
+com/example/tournament/util/MatchSchedulerUtilTest.class
+com/example/tournament/entity/MatchTest.class
+com/example/tournament/TournamentApplicationTests.class
+com/example/tournament/service/UserServiceImplTest.class

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<nav th:fragment="sidebar(activePage)" class="sidebar d-flex flex-column flex-shrink-0 p-0">
+    <div class="brand">
+        <img class="brand-logo" th:src="@{/images/logo-mark.jpg}" alt="Tournament">
+        <span>Tournament<small>Manager</small></span>
+    </div>
+    <ul class="nav nav-pills flex-column mb-auto px-2">
+        <li class="nav-item">
+            <a th:classappend="${activePage == 'dashboard'} ? 'active'" class="nav-link"
+               th:href="@{/dashboard}">
+                <i class="fas fa-gauge-high me-2"></i> Tableau de bord
+            </a>
+        </li>
+        <li class="nav-item">
+            <a th:classappend="${activePage == 'tournaments'} ? 'active'" class="nav-link"
+               th:href="@{/tournaments}">
+                <i class="fas fa-trophy me-2"></i> Tournois
+            </a>
+        </li>
+        <li class="nav-item">
+            <a th:classappend="${activePage == 'teams'} ? 'active'" class="nav-link"
+               th:href="@{/teams}">
+                <i class="fas fa-users me-2"></i> Équipes
+            </a>
+        </li>
+        <li class="nav-item" th:if="${isAdmin}">
+            <a th:classappend="${activePage == 'users'} ? 'active'" class="nav-link"
+               th:href="@{/admin/users}">
+                <i class="fas fa-user-shield me-2"></i> Utilisateurs
+            </a>
+        </li>
+    </ul>
+    <div class="px-3 py-3 border-top">
+        <div class="text-white small" th:text="|Connecté : ${currentUsername != null ? currentUsername : #authentication.name}|"></div>
+        <div class="mb-2">
+            <span class="badge"
+                  th:classappend="${isAdmin ? 'bg-danger' : (isManager ? 'bg-warning text-dark' : (isOperator ? 'bg-info text-dark' : 'bg-secondary'))}"
+                  th:text="${currentRole}">Rôle</span>
+        </div>
+        <form th:action="@{/logout}" method="post">
+            <button class="btn btn-outline-light btn-sm w-100" type="submit">
+                <i class="fas fa-sign-out-alt me-1"></i> Déconnexion
+            </button>
+        </form>
+    </div>
+</nav>
+</body>
+</html>
